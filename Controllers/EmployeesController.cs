@@ -3,6 +3,7 @@ using EmployeeMng.API.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace EmployeeMng.API.Controllers;
 
@@ -12,18 +13,35 @@ namespace EmployeeMng.API.Controllers;
 public class EmployeesController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
+    private readonly IMemoryCache _cache;
 
-    public EmployeesController(ApplicationDbContext context)
+    public EmployeesController(ApplicationDbContext context, IMemoryCache cache)
     {
         _context = context;
+        _cache = cache;
     }
 
     [HttpGet]
 public async Task<IActionResult> GetEmployees()
 {
-    var employees = await _context.Employees
-        .OrderBy(e => e.Id)
+    const string cacheKey = "employees";
+
+    if (_cache.TryGetValue(cacheKey, out List<Employee>? employees))
+    {
+        return Ok(employees);
+    }
+
+    employees = await _context.Employees
+        .AsNoTracking()
         .ToListAsync();
+
+    var cacheOptions = new MemoryCacheEntryOptions
+    {
+        AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5),
+        SlidingExpiration = TimeSpan.FromMinutes(2)
+    };
+
+    _cache.Set(cacheKey, employees, cacheOptions);
 
     return Ok(employees);
 }
@@ -46,6 +64,7 @@ public async Task<IActionResult> CreateEmployee(Employee employee)
     _context.Employees.Add(employee);
 
     await _context.SaveChangesAsync();
+    _cache.Remove("employees");
 
     return CreatedAtAction(
         nameof(GetEmployee),
@@ -89,5 +108,6 @@ public async Task<IActionResult> DeleteEmployee(int id)
 
     return NoContent();
 }
+
 }
 
