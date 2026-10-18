@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Caching.Memory;
+using Npgsql;
 
 namespace EmployeeMng.API.Controllers;
 
@@ -104,10 +105,26 @@ public async Task<IActionResult> DeleteEmployee(int id)
 
     _context.Employees.Remove(employee);
 
-    await _context.SaveChangesAsync();
+    try
+    {
+        await _context.SaveChangesAsync();
+    }
+    catch (DbUpdateException exception) when (
+        exception.InnerException is PostgresException
+        {
+            SqlState: PostgresErrorCodes.ForeignKeyViolation,
+            ConstraintName: "FK_Attendance_Employee_EmployeeId"
+        })
+    {
+        return Conflict(new ProblemDetails
+        {
+            Status = StatusCodes.Status409Conflict,
+            Title = "Employee has attendance records",
+            Detail = "Delete the employee's attendance records before deleting the employee."
+        });
+    }
 
     return NoContent();
 }
 
 }
-
