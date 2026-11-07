@@ -1,6 +1,54 @@
 @EmployeeMng.API_HostAddress = http://localhost:5000
+@token = paste-a-JWT-here
+@attendanceId = 1
 
-GET {{EmployeeMng.API_HostAddress}}/weatherforecast/
+### List and filter attendance
+GET {{EmployeeMng.API_HostAddress}}/api/attendance?startDate=2026-10-01&endDate=2026-10-31&department=Operations&page=1&pageSize=25
+Authorization: Bearer {{token}}
 Accept: application/json
 
 ###
+
+### Get one attendance record
+GET {{EmployeeMng.API_HostAddress}}/api/attendance/{{attendanceId}}
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### Summary for a date
+GET {{EmployeeMng.API_HostAddress}}/api/attendance/summary?date=2026-10-18
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### Create attendance
+POST {{EmployeeMng.API_HostAddress}}/api/attendance
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "employeeId": 1,
+  "attendanceDate": "2026-10-18",
+  "status": "Present",
+  "checkInTime": "2026-10-18T08:30:00Z",
+  "notes": "On time"
+}
+
+### Update attendance
+PUT {{EmployeeMng.API_HostAddress}}/api/attendance/{{attendanceId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "employeeId": 1,
+  "attendanceDate": "2026-10-18",
+  "status": "Late",
+  "checkInTime": "2026-10-18T09:15:00Z",
+  "notes": "Updated check-in"
+}
+
+### Check out (server records the current UTC time)
+POST {{EmployeeMng.API_HostAddress}}/api/attendance/{{attendanceId}}/check-out
+Authorization: Bearer {{token}}
+
+### Delete attendance (Admin role required)
+DELETE {{EmployeeMng.API_HostAddress}}/api/attendance/{{attendanceId}}
+Authorization: Bearer {{token}}
